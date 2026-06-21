@@ -1,0 +1,9 @@
+{
+  "name": "quran-reels",
+  "version": "1.0.0",
+  "description": "Quran Reels Studio — TikTok-style Quran recitation video generator",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
