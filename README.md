@@ -1,71 +1,41 @@
-# Quran Reels Studio 🎬
+# Quran Reels Studio Pro 🎬
 
-Generate TikTok/Reels-style Quran recitation videos directly in your browser. Pick a surah, select verses, choose a reciter, customize the visuals, and export as `.webm` — no server, no dependencies.
+Generate TikTok/Reels-style Quran recitation videos in your browser. Pick a surah, select verses, choose from 65+ reciters, customize visuals, and export as `.webm` — fully client-side, no server.
 
-## Features
+**Live:** https://quran-reels-lyart.vercel.app
 
-- **114 Surahs** with Arabic (Uthmani) + English (Saheeh International) text
-- **44 reciter variants** including Mujawwad (tajweed) versions for Husary, Minshawi, Abdul Basit
-- **50 video backgrounds** — nature, sky, clouds, stars, rain, and more
-- **12 animated gradient presets** with star particles
-- **Multi-font support** — Scheherazade New, Amiri, Aref Ruqaa for Arabic; Inter, Cinzel, Playfair Display, Lora for English
-- **4 aspect ratios** — 9:16 (TikTok/Reels), 16:9, 1:1, 4:5
-- **Export as `.webm`** with audio synced to actual verse durations
-- **Crossfade transitions** between verses (0.4s smooth blend)
-- **100% client-side** — everything runs in your browser
+## What's New (v2)
 
-## Quick Start
-
-Open **https://quran-reels-lyart.vercel.app** and you're set.
-
-Or open the file locally — no build step needed.
+- **65+ reciter variants** — all verified on everyayah.com
+- **25 gradient presets** with animated stars on dark themes
+- **87 video backgrounds** from Pixabay
+- **12 Arabic fonts** — Scheherazade New, Amiri, Tajawal, Cairo, Almarai, Reem Kufi, Katibeh, Lateef, Ruwudu, Alexandria + more
+- **10 English fonts** — Inter, Cinzel, Playfair Display, Montserrat, Poppins, DM Sans, Space Grotesk, Outfit, Quicksand + more
+- **Smooth TikTok-style transitions** — crossfade, zoom, slide with configurable duration
+- **Full editing suite** — text position, line height, shadow, stroke, watermark position, blur, background speed
+- **Custom upload** your own images/videos as background
+- **Cancel button** during export
+- **Font weight control** for both Arabic and English
+- **Export FPS** — 24/30/60fps
+- **Mobile responsive** — works on phone browsers
 
 ## Usage
 
 1. **Pick a surah** from the grid or search by name
-2. **Select verses** — tap individual verses or use Select All
-3. **Enter Studio** — choose a reciter, background, font, and colors
-4. **Preview** to check how it sounds/looks
-5. **Export MP4** — waits for all audio to download, then records in real-time
+2. **Select verses** — tap individual verses or Select All
+3. **Enter Studio** — choose reciter, background, fonts, colors, effects
+4. **Preview** to check sound and visuals
+5. **Export MP4** — real-time render with smooth verse transitions
 
-## Reciters
+## Tech
 
-| Reciter | Variants |
-|---------|----------|
-| Mishary Al-Afasy | 128kbps, 64kbps |
-| Abdurrahmaan As-Sudais | 64kbps, 192kbps |
-| Abu Bakr Ash-Shaatree | 64kbps, 128kbps |
-| Mahmoud Al-Husary | 64kbps, 128kbps, **Mujawwad**, **Muallim** |
-| Yasser Al-Dossari | 128kbps |
-| Maher Al-Muaiqly | 64kbps, 128kbps |
-| Saood Ash-Shuraym | 64kbps, 128kbps |
-| Ali Al-Hudhaify | 64kbps, 128kbps |
-| Hani Ar-Rifai | 64kbps, 192kbps |
-| Abdul Basit | Murattal 64k/192k, **Mujawwad** |
-| Mohamed Al-Minshawi | Murattal, **Mujawwad**, **Teacher** |
-| +13 more | Muhammad Ayyoub, Mustafa Ismail, Salah Al-Budair, etc. |
-
-## Tech Stack
-
-- Single HTML file (no framework, no build)
-- Canvas API + `requestAnimationFrame` for rendering
-- `MediaRecorder` + `AudioContext` for export
+- Single HTML file (no build, no framework)
+- Canvas API + requestAnimationFrame for rendering
+- MediaRecorder + AudioContext for export with crossfade
 - everyayah.com for per-verse MP3 audio
 - alquran.cloud for Arabic + English text
 - Pixabay CDN for video backgrounds
 
-## Audio Sources
+## Deploy
 
-All per-verse MP3s are sourced from **everyayah.com** (BunnyCDN). Quran text via **alquran.cloud** (AlQuran Cloud API).
-
-## Project Files
-
-| File | Purpose |
-|------|---------|
-| `index.html` | The entire application (single file) |
-| `vercel.json` | Vercel deployment config |
-| `quran-reels-context.md` | Detailed developer documentation |
-
-## License
-
-MIT
+Push to main branch on GitHub — Vercel auto-deploys.
