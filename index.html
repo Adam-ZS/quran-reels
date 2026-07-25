@@ -124,7 +124,12 @@ body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;overflo
 .bgv{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;max-height:180px;overflow-y:auto}
 .bgv .bp{aspect-ratio:16/9;border-radius:4px;border:2px solid transparent;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
 .bgv .bp:hover{border-color:var(--gd);transform:scale(1.02)}.bgv .bp.on{border-color:var(--gd);box-shadow:0 0 8px rgba(201,169,110,.2)}
-.bgv .bp span{font-size:8px;color:rgba(255,255,255,.6);text-align:center;padding:4px;line-height:1.3;text-shadow:0 1px 4px rgba(0,0,0,.6);font-weight:500}
+.bgv .bp span{font-size:8px;color:rgba(255,255,255,.6);text-align:center;padding:4px;line-height:1.3;text-shadow:0 1px 4px rgba(0,0,0,.6);font-weight:500;position:relative;z-index:2;pointer-events:none}
+.bgv .bp .bp-bg{position:absolute;inset:0;z-index:0}
+.bgv .bp .bp-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;display:none}
+.bgv .bp.on .bp-img{opacity:.8}
+.bgv .bp.on span{color:#fff;text-shadow:0 0 8px rgba(0,0,0,.9)}
+.bgv .bp{position:relative}
 .exo{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:12px;backdrop-filter:blur(8px)}
 .exo.on{display:flex}
 .exo .spin{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--gd);border-radius:50%;animation:sp .8s linear infinite}
@@ -421,7 +426,38 @@ const VIDS=[
   {n:'Ocean Sunset',u:'https://cdn.pixabay.com/video/2021/08/04/87768-600773714_tiny.mp4'},
 ];
 
-// ═══ FONTS ════════════════════════════════════════
+// ═══ THUMBNAIL CAPTURE SYSTEM ═══════════════════
+const THUMB_CACHE={};
+let _thumbQueue=[],_thumbRunning=false;
+function queueThumbCapture(urls,batchSize=4,callback){
+  let idx=0;
+  _thumbQueue=urls.map(u=>({u,i:idx++}));
+  if(!_thumbRunning){_thumbRunning=true;processThumbBatch(batchSize,callback);}
+}
+async function processThumbBatch(batchSize,callback){
+  const batch=_thumbQueue.splice(0,batchSize);
+  if(!batch.length){_thumbRunning=false;return;}
+  await Promise.all(batch.map(({u,i})=>captureVideoFrame(u).then(t=>{if(t&&callback)callback(i,t);})));
+  setTimeout(()=>processThumbBatch(batchSize,callback),100);
+}
+function captureVideoFrame(url){
+  return new Promise(resolve=>{
+    if(THUMB_CACHE[url]){resolve(THUMB_CACHE[url]);return;}
+    const v=document.createElement('video');
+    v.crossOrigin='anonymous';v.muted=true;v.playsInline=true;v.preload='metadata';
+    v.onloadedmetadata=()=>{v.currentTime=Math.min(v.duration*0.15,1);};
+    v.onseeked=()=>{
+      const c=document.createElement('canvas'),w=160,h=90;
+      c.width=w;c.height=h;const cx=c.getContext('2d');
+      try{cx.drawImage(v,0,0,w,h);}catch(e){v.remove();resolve(null);return;}
+      const d=c.toDataURL('image/jpeg',0.5);
+      THUMB_CACHE[url]=d;v.remove();resolve(d);
+    };
+    v.onerror=()=>{v.remove();resolve(null);};
+    v.src=url;v.load();
+  });
+}
+
 const AR_FONTS=[
   'Scheherazade New','Amiri','Aref Ruqaa','Noto Naskh Arabic',
   'Tajawal','Cairo','Almarai','Reem Kufi','Katibeh','Lateef','Ruwudu','Alexandria'
@@ -442,9 +478,10 @@ const S={
   shad:true,shadC:'rgba(0,0,0,.7)',shadB:20,shadY:2,
   stroke:false,strokeC:'rgba(0,0,0,.25)',strokeW:1,
   bgT:'preset',bgP:'night',bgVidIdx:0,
-  vPos:50,  // 0=top, 50=center, 100=bottom
+  bgVidSpd:1,vignette:0,colorOv:'',colorOvOp:0.3,
+  parallax:false,bgZoom:0,
+  vPos:50,
   lh:1.5,
-  showNum:true,
   bgSpeed:1,
   bgBlur:0,
   transStyle:'crossfade', // crossfade, zoom, slide
@@ -574,21 +611,36 @@ function drawVerseText(txt,tr,vn,w,h,alpha,fadeDir){
 function drawBg(w,h){
   if(S._bgV&&S._bgV.readyState>=2){
     try{
-      if(S.bgBlur>0){CT.save();CT.filter=`blur(${S.bgBlur}px)`;}
+      CT.save();
+      if(S.bgZoom>0){const s=1+S.bgZoom*0.02;const cx=w/2,cy=h/2;CT.translate(cx,cy);CT.scale(s,s);CT.translate(-cx,-cy);}
+      if(S.parallax){
+        const px=Math.sin(S._bo*0.5)*w*0.02,py=Math.cos(S._bo*0.3)*h*0.015;
+        CT.translate(px,py);
+      }
+      if(S.bgBlur>0)CT.filter=`blur(${S.bgBlur}px)`;
       CT.drawImage(S._bgV,0,0,w,h);
-      if(S.bgBlur>0)CT.restore();
-    }catch(e){}
+      CT.restore();
+    }catch(e){CT.restore();}
+    // Vignette
+    if(S.vignette>0){const g=CT.createRadialGradient(w/2,h/2,w*0.3,w/2,h/2,w*0.7);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${S.vignette})`);CT.fillStyle=g;CT.fillRect(0,0,w,h);}
+    // Color overlay
+    if(S.colorOv){CT.fillStyle=S.colorOv;CT.globalAlpha=S.colorOvOp;CT.fillRect(0,0,w,h);CT.globalAlpha=1;}
     return;
   }
   if(S._bgImg){
     try{
-      if(S.bgBlur>0){CT.save();CT.filter=`blur(${S.bgBlur}px)`;}
+      CT.save();
+      if(S.bgZoom>0){const s=1+S.bgZoom*0.02;const cx=w/2,cy=h/2;CT.translate(cx,cy);CT.scale(s,s);CT.translate(-cx,-cy);}
+      if(S.parallax){CT.translate(Math.sin(S._bo*0.5)*w*0.02,Math.cos(S._bo*0.3)*h*0.015);}
+      if(S.bgBlur>0)CT.filter=`blur(${S.bgBlur}px)`;
       CT.drawImage(S._bgImg,0,0,w,h);
-      if(S.bgBlur>0)CT.restore();
-    }catch(e){}
+      CT.restore();
+    }catch(e){CT.restore();}
+    if(S.vignette>0){const g=CT.createRadialGradient(w/2,h/2,w*0.3,w/2,h/2,w*0.7);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${S.vignette})`);CT.fillStyle=g;CT.fillRect(0,0,w,h);}
+    if(S.colorOv){CT.fillStyle=S.colorOv;CT.globalAlpha=S.colorOvOp;CT.fillRect(0,0,w,h);CT.globalAlpha=1;}
     return;
   }
-  if(!S.bgP){CT.fillStyle='#0a0a0f';CT.fillRect(0,0,w,h);return;}
+  if(!S.bgP){CT.fillStyle='#0a0a0f';CT.fillRect(0,0,w,h);if(S.vignette>0){const g=CT.createRadialGradient(w/2,h/2,w*0.3,w/2,h/2,w*0.7);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${S.vignette})`);CT.fillStyle=g;CT.fillRect(0,0,w,h);}if(S.colorOv){CT.fillStyle=S.colorOv;CT.globalAlpha=S.colorOvOp;CT.fillRect(0,0,w,h);CT.globalAlpha=1;}return;}
   S._bo+=0.002*S.bgSpeed;
   const p=PRESETS.find(x=>x[0]===S.bgP)||PRESETS[0];
   const cs=p[1].split(','),cx=w/2,cy=h/2;
@@ -610,6 +662,9 @@ function drawBg(w,h){
     }
     CT.globalAlpha=1;
   }
+  // Vignette & color overlay for presets too
+  if(S.vignette>0){const g=CT.createRadialGradient(w/2,h/2,w*0.3,w/2,h/2,w*0.7);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${S.vignette})`);CT.fillStyle=g;CT.fillRect(0,0,w,h);}
+  if(S.colorOv){CT.fillStyle=S.colorOv;CT.globalAlpha=S.colorOvOp;CT.fillRect(0,0,w,h);CT.globalAlpha=1;}
 }
 function loop(){
   const needsDraw=S.playing||S.exporting||(S._bgV&&S._bgV.readyState>=2&&!S._bgV.paused);
@@ -767,11 +822,16 @@ function renderCtrl(){
   <div style="display:flex;gap:4px;margin-bottom:3px"><input type="range" id="shBlur" min="0" max="40" value="${S.shadB}" oninput="onCh()" style="flex:1"><span class="rv" id="shBV">${S.shadB}</span></div>
   <div style="display:flex;gap:4px"><input type="range" id="shY" min="0" max="8" step="0.5" value="${S.shadY}" oninput="onCh()" style="flex:1"><span class="rv" id="shYV">${S.shadY}</span></div></div></div>
 <div class="cg"><div class="tr2"><label>Text Stroke</label><label class="tg"><input type="checkbox" id="strTg" ${S.stroke?'checked':''} onchange="onCh()"><span class="sl"></span></label></div></div>
-<div class="cg"><label>Background</label><div class="bgt">${['Presets','Videos','Upload'].map((t,i)=>`<button class="bgb${(t==='Presets'&&S.bgT==='presets')||(t==='Videos'&&S.bgT==='videos')||(t==='Upload'&&S.bgT==='upload')?' on':''}" onclick="swBg('${t.toLowerCase()}',this)">${t}</button>`).join('')}</div><div id="bgC"></div></div>
+<div class="cg"><label>Background</label><div class="bgt">${['Presets','Videos','Pexels','Upload'].map((t,i)=>`<button class="bgb${(t==='Presets'&&S.bgT==='presets')||(t==='Videos'&&S.bgT==='videos')||(t==='Pexels'&&S.bgT==='pexels')||(t==='Upload'&&S.bgT==='upload')?' on':''}" onclick="swBg('${t.toLowerCase()}',this)">${t}</button>`).join('')}</div><div id="bgC"></div></div>
 <div class="cg"><label>Background Speed</label><div class="rg"><input type="range" id="bgSpd" min="0" max="3" step="0.1" value="${S.bgSpeed}" oninput="onCh()"><span class="rv" id="bgSpdV">${S.bgSpeed.toFixed(1)}x</span></div></div>
+<div class="cg"><label>Video Speed</label><div class="rg"><input type="range" id="vidSpd" min="0.25" max="2" step="0.05" value="${S.bgVidSpd}" oninput="onCh()"><span class="rv" id="vidSpdV">${S.bgVidSpd.toFixed(2)}x</span></div></div>
+<div class="cg"><div class="tr2"><label>Parallax Drift</label><label class="tg"><input type="checkbox" id="parTg" ${S.parallax?'checked':''} onchange="onCh()"><span class="sl"></span></label></div></div>
+<div class="cg"><label>Ken Burns Zoom</label><div class="rg"><input type="range" id="bgZoom" min="0" max="20" value="${S.bgZoom}" oninput="onCh()"><span class="rv" id="bgZoomV">${S.bgZoom}</span></div></div>
+<div class="cg"><label>Vignette</label><div class="rg"><input type="range" id="vignetteR" min="0" max="0.8" step="0.05" value="${S.vignette}" oninput="onCh()"><span class="rv" id="vignetteV">${S.vignette.toFixed(2)}</span></div></div>
+<div class="cg"><label>Color Overlay</label><div class="cl"><input type="color" id="colorOv" value="${S.colorOv||'#000000'}" oninput="onCh()"><input type="text" id="colorOvT" value="${S.colorOv||'#000000'}" placeholder="#hex" style="flex:1" oninput="document.getElementById('colorOv').value=this.value;onCh()"><label class="tg" style="flex-shrink:0"><input type="checkbox" id="colorOvTg" ${S.colorOv?'checked':''} onchange="onCh()"><span class="sl"></span></label></div><div id="colorOvU" style="${S.colorOv?'':'display:none'};margin-top:3px"><div class="rg"><input type="range" id="colorOvOpR" min="0" max="0.8" step="0.05" value="${S.colorOvOp}" oninput="onCh()"><span class="rv" id="colorOvOpV">${S.colorOvOp.toFixed(2)}</span></div></div></div>
 <div class="cg"><label>Background Blur</label><div class="rg"><input type="range" id="bgBlurR" min="0" max="10" step="0.5" value="${S.bgBlur}" oninput="onCh()"><span class="rv" id="bgBlurV">${S.bgBlur}px</span></div></div>
 <div class="cg"><label>Transition Style</label><div class="fp">${['crossfade','zoom','slide'].map(t=>`<button class="fb${t===S.transStyle?' on':''}" onclick="setTrans('${t}',this)">${t}</button>`).join('')}</div></div>
-<div class="cg"><label>Transition Duration (s)</label><div class="rg"><input type="range" id="fadeDur" min="0.1" max="1" step="0.05" value="${S.fadeDur}" oninput="onCh()"><span class="rv" id="fadeDurV">${S.fadeDur.toFixed(2)}</span></div></div>
+<div class="cg"><label>Transition Duration (s)</label><div class="rg"><input type="range" id="fadeDur" min="0.1" max="1.5" step="0.05" value="${S.fadeDur}" oninput="onCh()"><span class="rv" id="fadeDurV">${S.fadeDur.toFixed(2)}</span></div></div>
 <div class="cg"><label>Export FPS</label><div class="fp">${[24,30,60].map(f=>`<button class="fb${f===S.fps?' on':''}" onclick="setFps(${f},this)">${f}fps</button>`).join('')}</div></div>
 `;
   const sel=$('rc');RECS.forEach(r=>{const o=document.createElement('option');o.value=r[0];o.textContent=r[1];sel.appendChild(o);});sel.value=S.rec;
@@ -782,8 +842,11 @@ function renderBg(t){
   if(t==='presets'){
     c.innerHTML=`<div class="bgp">${PRESETS.map(p=>`<div class="bgi${p[0]===S.bgP?' on':''}" style="background:linear-gradient(135deg,${p[1]})" onclick="pickP('${p[0]}',this)" title="${p[0]}"></div>`).join('')}</div>`;
   }else if(t==='videos'){
-    c.innerHTML=`<input type="text" id="vq" placeholder="Search backgrounds..." value="" style="width:100%;padding:4px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-size:9px;outline:none;margin-bottom:4px;font-family:inherit" onkeyup="window.searchVid()"><div class="bgv" id="vg"></div>`;
+    const catOpts=`<option value="all">All Categories</option>${VID_CATS.map(c=>`<option value="${c.n}">${c.n}</option>`).join('')}`;
+    c.innerHTML=`<div style="display:flex;gap:4px;margin-bottom:4px"><input type="text" id="vq" placeholder="Search..." value="" style="flex:1;padding:4px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-size:9px;outline:none;font-family:inherit" onkeyup="window.searchVid()"><select id="vcat" onchange="window.searchVid()" style="width:auto;padding:4px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-size:9px;outline:none;font-family:inherit">${catOpts}</select></div><div class="bgv" id="vg"></div>`;
     window.searchVid();
+  }else if(t==='pexels'){
+    c.innerHTML=`<div style="margin-bottom:4px"><input type="text" id="pexQ" placeholder="Search Pexels..." style="width:100%;padding:4px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-size:9px;outline:none;font-family:inherit" onkeyup="window.searchPexels()"><div style="display:flex;gap:4px;margin-top:4px"><button style="flex:1;padding:4px 0;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--td);font-size:8px;font-weight:600;cursor:pointer;font-family:inherit" onclick=\'nature'\">Nature</button><button style="flex:1;padding:4px 0;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--td);font-size:8px;font-weight:600;cursor:pointer;font-family:inherit" onclick="quickPex(\'mosque\')">Mosque</button><button style="flex:1;padding:4px 0;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--td);font-size:8px;font-weight:600;cursor:pointer;font-family:inherit" onclick="quickPex(\'night\')">Night</button><button style="flex:1;padding:4px 0;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--td);font-size:8px;font-weight:600;cursor:pointer;font-family:inherit" onclick="quickPex(\'ocean\')">Ocean</button></div></div><div class="bgv" id="pexG" style="max-height:320px"><div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--tm);font-size:9px">Type a keyword and press Enter, or click a quick search above</div></div>`;
   }else{
     c.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--s2);border-radius:4px;border:1px dashed var(--bd);text-align:center">
       <p style="font-size:10px;color:var(--td)">Upload your own background</p>
@@ -813,17 +876,45 @@ window.handleUpload=input=>{
 };
 window.swBg=(t,btn)=>{S.bgT=t;document.querySelectorAll('.bgb').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderBg(t);};
 window.pickP=(id,el)=>{S.bgP=id;S._bgImg=null;if(S._bgV){S._bgV.pause();if(S._bgV.src)URL.revokeObjectURL(S._bgV.src);S._bgV=null;stopL();}document.querySelectorAll('.bgi').forEach(b=>b.classList.remove('on'));el.classList.add('on');draw();};
+// Video category keywords
+const VID_CATS=[
+  {k:'water ocean sea wave river lake shore coast beach stream pond rain waterfall bay',n:'Water'},
+  {k:'sky cloud night star moonlight moon milky galaxy space nebula starfield',n:'Sky & Space'},
+  {k:'forest tree leaf wood plant green grass meadow garden flower blossom cherry lavender wheat field pine',n:'Forest & Nature'},
+  {k:'mountain peak hill valley snow peak alpine cliff canyon vista ridge',n:'Mountains'},
+  {k:'desert sand dune sunset sunrise sun golden horizon dusk dawn',n:'Desert & Sun'},
+  {k:'snow ice winter frost freeze frozen glacier cold',n:'Snow & Ice'},
+  {k:'fire flame smoke glow candle light firefly',n:'Fire & Dramatic'},
+  {k:'abstract pattern texture blur kaleidoscope',n:'Abstract'},
+  {k:'aerial drone bird eye view fly over from above',n:'Aerial'},
+  {k:'fog mist foggy haze',n:'Fog & Mist'},
+];
+function getVidCats(name){
+  const n=name.toLowerCase();
+  const cats=[];
+  VID_CATS.forEach(c=>{if(c.k.split(' ').some(kw=>n.includes(kw)))cats.push(c.n);});
+  return cats.length?cats:['Other'];
+}
 window.searchVid=()=>{
   const q=($('vq')?.value||'').toLowerCase();const g=$('vg');if(!g)return;
-  const m=q?VIDS.filter(v=>v.n.toLowerCase().includes(q)):VIDS;
+  const catFilter=$('vcat')?.value||'all';
+  let m=q?VIDS.filter(v=>v.n.toLowerCase().includes(q)):VIDS;
+  if(catFilter!=='all')m=m.filter(v=>getVidCats(v.n).includes(catFilter));
   g.innerHTML=m.map((v,i)=>{
     let h=0;for(let c=0;c<v.n.length;c++)h=(h*31+v.n.charCodeAt(c))%360;
     const c1=`hsl(${h},55%,18%)`,c2=`hsl(${(h+40)%360},50%,25%)`;
     const isOn=S.bgVidIdx===VIDS.indexOf(v);
-    return `<div class="bp${isOn?' on':''}" onclick="pickVid(${VIDS.indexOf(v)},this)" style="background:linear-gradient(135deg,${c1},${c2})"><span>${v.n}</span></div>`;
+    const thumb=THUMB_CACHE[v.u];
+    return `<div class="bp${isOn?' on':''}" onclick="pickVid(${VIDS.indexOf(v)},this)" title="${v.n}"><div class="bp-bg" style="background:linear-gradient(135deg,${c1},${c2})"></div>${thumb?`<img class="bp-img" src="${thumb}" alt="${v.n}" loading="lazy">`:''}<span>${v.n}</span></div>`;
   }).join('');
-  // Auto-select first if none selected
-  if(m.length>0&&S.bgVidIdx<0){pickVid(VIDS.indexOf(m[0]),g.querySelector('.bp'));}
+  if(m.length>0&&S.bgVidIdx<0)pickVid(VIDS.indexOf(m[0]),g.querySelector('.bp'));
+  // Start capturing thumbnails for visible videos
+  if(m.length&&!Object.keys(THUMB_CACHE).length){
+    queueThumbCapture(m.slice(0,30).map(v=>v.u),3,(idx,thumb)=>{
+      const imgs=g.querySelectorAll('.bp-img');
+      if(imgs[idx]&&thumb){imgs[idx].src=thumb;imgs[idx].style.display='block';}
+    });
+  }
 };
 window.pickVid=(idx,el)=>{
   document.querySelectorAll('.bp').forEach(b=>b.classList.remove('on'));if(el)el.classList.add('on');
@@ -831,10 +922,43 @@ window.pickVid=(idx,el)=>{
   if(S._bgV){S._bgV.pause();if(S._bgV.src)URL.revokeObjectURL(S._bgV.src);S._bgV=null;}
   const vl=document.createElement('video');
   vl.src=v.u;vl.loop=true;vl.muted=true;vl.playsInline=true;vl.crossOrigin='anonymous';vl.preload='auto';
-  vl.oncanplay=()=>{S._bgV=vl;vl.play().catch(()=>{});startL();draw();};
+  vl.oncanplay=()=>{S._bgV=vl;vl.playbackRate=S.bgVidSpd;vl.play().catch(()=>{});startL();draw();};
   vl.onerror=()=>{S._bgV=null;};
   vl.load();
 };
+
+// ═══ PEXELS LIVE SEARCH ══════════════════════════
+const PEX_KEY='563492ad6f91700001000001f58512b27ee04f898e24172698be375f';
+window.quickPex=(q)=>{const i=document.getElementById('pexQ');if(i){i.value=q;searchPexels();}};
+window.searchPexels=async()=>{
+  const q=document.getElementById('pexQ')?.value?.trim()||'nature';const g=document.getElementById('pexG');if(!g)return;
+  g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--tm)"><div class="spin" style="margin:0 auto 12px;width:20px;height:20px"></div>Searching...</div>';
+  try{
+    const r=await fetch('https://api.pexels.com/videos/search?query='+encodeURIComponent(q)+'&per_page=30&orientation=portrait',{headers:{Authorization:PEX_KEY}});
+    const d=await r.json();if(!d.videos||!d.videos.length){g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--tm);font-size:9px">No results. Try a different search.</div>';return;}
+    g.innerHTML=d.videos.map(v=>{
+      const small=v.video_files?.filter(f=>f.width&&f.height&&parseInt(f.width)<=540)[0]||v.video_files?.[0];
+      if(!small)return '';
+      const thumb=v.video_pictures?.[0]?.picture||'';
+      const name=v.url?.split('/')?.pop()?.replace(/-/g,' ')?.replace(/\//g,'')?.trim()||'Video';
+      const url=small.link;
+      return '<div class="bp" onclick="pickPex(\''+url+'\',this)" title="'+name+'"><div class="bp-bg" style="background:linear-gradient(135deg,#1a1a2e,#16213e)"></div>'+(thumb?'<img class="bp-img" src="'+thumb+'" style="display:block">':'')+'<span>'+name.substring(0,20)+'</span></div>';
+    }).join('');
+  }catch(e){
+    g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--em2);font-size:9px">Search failed. Check connection.</div>';
+  }
+};
+window.pickPex=(url,el)=>{
+  document.querySelectorAll('#pexG .bp').forEach(b=>b.classList.remove('on'));if(el)el.classList.add('on');
+  S._bgImg=null;S.bgP=null;S.bgVidIdx=-1;
+  if(S._bgV){S._bgV.pause();if(S._bgV.src)URL.revokeObjectURL(S._bgV.src);S._bgV=null;}
+  const vl=document.createElement('video');
+  vl.src=url;vl.loop=true;vl.muted=true;vl.playsInline=true;vl.crossOrigin='anonymous';vl.preload='auto';
+  vl.oncanplay=()=>{S._bgV=vl;vl.playbackRate=S.bgVidSpd;vl.play().catch(()=>{});startL();draw();};
+  vl.onerror=()=>{S._bgV=null;};
+  vl.load();
+};
+
 window.setTrans=(t,btn)=>{S.transStyle=t;document.querySelectorAll('.fp:last-of-type .fb:not([onclick*=\"setFmt\"]):not([onclick*=\"setFps\"])').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');draw();};
 window.setFps=(f,btn)=>{S.fps=f;[...document.querySelectorAll('.fb')].filter(b=>b.textContent.includes('fps')).forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');};
 window.setFmt=(f,btn)=>{S.fmt=f;document.querySelectorAll('.fp .fb').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');resizeCV();draw();};
@@ -860,6 +984,14 @@ window.onCh=()=>{
   S.shadY=parseFloat(g('shY')?.value)||2;if(g('shYV'))g('shYV').textContent=S.shadY;
   S.stroke=g('strTg')?.checked??S.stroke;
   S.bgSpeed=parseFloat(g('bgSpd')?.value)||1;if(g('bgSpdV'))g('bgSpdV').textContent=S.bgSpeed.toFixed(1)+'x';
+  S.bgVidSpd=parseFloat(g('vidSpd')?.value)||1;if(g('vidSpdV'))g('vidSpdV').textContent=S.bgVidSpd.toFixed(2)+'x';
+  if(S._bgV&&S._bgV.playbackRate!==S.bgVidSpd)try{S._bgV.playbackRate=S.bgVidSpd;}catch(e){}
+  S.parallax=g('parTg')?.checked??S.parallax;
+  S.bgZoom=parseInt(g('bgZoom')?.value)||0;if(g('bgZoomV'))g('bgZoomV').textContent=S.bgZoom;
+  S.vignette=parseFloat(g('vignetteR')?.value)||0;if(g('vignetteV'))g('vignetteV').textContent=S.vignette.toFixed(2);
+  const colorOvOn=g('colorOvTg')?.checked??false;const colorOvHex=g('colorOv')?.value||'';
+  if(colorOvOn&&colorOvHex){S.colorOv=colorOvHex;S.colorOvOp=parseFloat(g('colorOvOpR')?.value)||0.3;if(g('colorOvT'))g('colorOvT').value=colorOvHex;if(g('colorOvU'))g('colorOvU').style.display='block';}else{S.colorOv='';if(g('colorOvU'))g('colorOvU').style.display='none';}
+  if(g('colorOvOpV'))g('colorOvOpV').textContent=S.colorOvOp.toFixed(2);
   S.bgBlur=parseFloat(g('bgBlurR')?.value)||0;if(g('bgBlurV'))g('bgBlurV').textContent=S.bgBlur+'px';
   S.fadeDur=parseFloat(g('fadeDur')?.value)||0.4;if(g('fadeDurV'))g('fadeDurV').textContent=S.fadeDur.toFixed(2);
   // Shadow UI
