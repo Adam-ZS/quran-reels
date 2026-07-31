@@ -8,7 +8,7 @@ Generate TikTok/Reels-style Quran recitation videos in your browser. Pick a sura
 
 - **65+ reciter variants** — all verified on everyayah.com
 - **25 gradient presets** with animated stars on dark themes
-- **87 video backgrounds** from Pixabay
+- **216 video backgrounds** — Pixabay CDN + live **Pexels search** with thumbnail capture, vignette, parallax and color overlay (v1.1)
 - **12 Arabic fonts** — Scheherazade New, Amiri, Tajawal, Cairo, Almarai, Reem Kufi, Katibeh, Lateef, Ruwudu, Alexandria + more
 - **10 English fonts** — Inter, Cinzel, Playfair Display, Montserrat, Poppins, DM Sans, Space Grotesk, Outfit, Quicksand + more
 - **Smooth TikTok-style transitions** — crossfade, zoom, slide with configurable duration
