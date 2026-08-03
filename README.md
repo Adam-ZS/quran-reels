@@ -15,6 +15,8 @@ Generate TikTok/Reels-style Quran recitation videos in your browser. Pick a sura
 ## What's New (v2)
 
 - **65+ reciter variants** — all verified on everyayah.com
+- **Verse audio checker** — verifies everyayah MP3s exist before you export
+- **Audio FX** — volume, reverb, bass, treble, compression, bismillah intro toggle
 - **25 gradient presets** with animated stars on dark themes
 - **216 video backgrounds** — Pixabay CDN + live **Pexels search** with thumbnail capture, vignette, parallax and color overlay (v1.1)
 - **12 Arabic fonts** — Scheherazade New, Amiri, Tajawal, Cairo, Almarai, Reem Kufi, Katibeh, Lateef, Ruwudu, Alexandria + more
@@ -33,7 +35,7 @@ Generate TikTok/Reels-style Quran recitation videos in your browser. Pick a sura
 2. **Select verses** — tap individual verses or Select All
 3. **Enter Studio** — choose reciter, background, fonts, colors, effects
 4. **Preview** to check sound and visuals
-5. **Export MP4** — real-time render with smooth verse transitions
+5. **Export WebM** — real-time render with smooth verse transitions
 
 ## Tech
 
