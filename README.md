@@ -1,82 +1,42 @@
-# Quran Reels Studio 4
+# Quran Reels Studio 5
 
-A build-free, browser-first editor for creating TikTok, Instagram Reels, YouTube Shorts, portrait, square, and landscape Quran recitation videos.
+A build-free, browser-first Quran video editor for TikTok, Instagram Reels, YouTube Shorts, portrait, square, and landscape exports.
 
-Choose a surah and ayah range, select a verse-by-verse reciter or supply your own recording, add verified tajweed colors, choose a motion or free-stock background, tune the layout and audio, then export the finished video locally.
+Studio 5 is primarily a reliability release. It fixes the silent Chromium MP4 and severely dropped-frame Firefox/Chromium exports by removing real-time canvas recording from the final render path.
 
-## What is new in Studio 4
+## Studio 5 export fixes
 
-### Expanded visual library
+- Deterministic frame-by-frame video rendering
+- Explicit 24/30 fps timestamps instead of wall-clock recording
+- Independent offline audio mastering and encoding
+- MP4 H.264 + AAC output with an AAC encoder extension when required
+- WebM VP9/VP8 + Opus output
+- Final-file validation before download
+- Refuses silent files or low-frame-rate files
+- Timestamp-based video-background decoding
+- Smooth generated-background fallback when a remote clip cannot be decoded
+- Reduced-resolution editor preview for smoother interaction
+- Performance, Balanced, and Quality preview modes
+- Draft, High, and Ultra export modes
 
-- 24 animated motion scenes generated entirely on-device
-- 215-item legacy stock-video catalog after runtime cleanup of duplicates and placeholder records
-- Unified free-media search hub:
-  - Pexels video search using your own free API key
-  - Pixabay video search using your own free API key
-  - Wikimedia Commons video search without an API key
-  - Internet Archive movie search without an API key
-- Direct MP4/WebM URL input
-- Persistent local video vault powered by IndexedDB
-- Saved remote-video library with source, creator, and license notes
-- Provider-aware media credits stored with the project
-- Clear cross-origin and licensing warnings before publication
+See `EXPORT-ENGINE.md` for the diagnosis of the supplied broken samples and the complete new pipeline.
 
-The generated motion scenes are the most reliable export option because they do not depend on remote files, API availability, or cross-origin video permissions.
-
-### Larger reciter system
-
-- 65+ bundled EveryAyah reciter variants
-- One-click synchronization of the current free Al Quran Cloud verse-by-verse audio catalog
-- Search and favorites
-- Murattal, Mujawwad, and Muallim filters
-- Short voice preview before entering the studio
-- Dynamic per-surah audio URL loading and caching
-- Existing custom audio upload and microphone recording support
-
-The app does not bundle or redistribute reciter recordings inside the ZIP. Audio is streamed from the configured Quran-audio providers when selected.
-
-### Tajweed layer
-
-- Verified `quran-tajweed` edition loaded per surah
-- Safe parsing that retains only Quran text and recognized tajweed-rule classes
-- Color rendering in the verse picker
-- Tajweed emphasis in the exported canvas video
-- Classic, high-contrast, and single-color palettes
-- Adjustable color intensity
-- Built-in legend for madd, ghunnah, ikhfā’, idghām, iqlāb, qalqalah, and hamzat al-waṣl
-
-The tajweed layer is a visual aid. It does not listen to or grade pronunciation and is not a substitute for learning with a qualified teacher.
-
-### Recitation-focused audio finishing
-
-Six original mastering profiles are included:
-
-- Natural Clean
-- Dry Teaching
-- Warm Masjid
-- Broadcast Clear
-- Wide Hall
-- Intimate Soft
-
-The processing chain now includes high-pass cleanup, warmth EQ, de-essing, presence control, gentle compression, adjustable room impulse, normalization, and limiting. These controls enhance a supplied recording; they do not clone or impersonate a named reciter.
-
-## Existing editor features
+## Content and design features
 
 - All 114 surahs with individual ayah and range selection
+- 65+ bundled verse-by-verse reciter editions
+- Optional synchronization with the free Al Quran Cloud catalog
+- Murattal, Mujawwad, and Muallim filters
+- Reciter preview, favorites, uploaded audio, and microphone recording
 - Multiple translations and optional transliteration
-- Custom MP3, WAV, M4A, and browser-supported audio uploads
-- Browser microphone recording
-- Automatic audio analysis and ayah timeline
-- 9:16, 4:5, 1:1, and 16:9 formats
-- Six complete design templates
-- Arabic typography, translation styling, watermarking, safe areas, grain, vignette, overlays, blur, parallax, and zoom
-- Intro and outro cards
-- Karaoke reveal, fade, and static captions
-- MP4 H.264/AAC conversion when WebCodecs is available
-- WebM VP9/Opus fallback
-- JSON project save/load
-- Installable PWA app shell
-- Keyboard controls
+- Verified `quran-tajweed` text layer with rule colors
+- Six recitation-focused mastering profiles
+- 24 deterministic animated backgrounds
+- Local video vault using IndexedDB
+- Pexels and Pixabay search with the user's own API key
+- Wikimedia Commons and Internet Archive search without an API key
+- Intro/outro cards, templates, safe areas, captions, verse progress, watermarking, overlays, vignette, blur, grain, and typography controls
+- JSON project save/load and PWA app shell
 
 ## Run locally
 
@@ -103,37 +63,44 @@ http://127.0.0.1:4173
 
 A static host such as Vercel, Netlify, GitHub Pages, Cloudflare Pages, or an ordinary web server also works.
 
-## Source setup
+## Recommended export workflow
 
-Pexels and Pixabay require a free personal API key. Keys are stored only in that browser and are not included in saved project files.
+1. Start with **High · 720p · 30 fps**.
+2. Use a generated motion background or an imported local video for maximum reliability.
+3. Choose MP4 in current Chrome/Edge. When H.264 is unavailable, choose WebM.
+4. Keep the tab open until the validation step finishes.
+5. Studio 5 downloads the result only when both audio and video tracks pass validation.
 
-Wikimedia Commons and Internet Archive searches do not require keys. Individual assets can have different licenses or rights statements, so review the source metadata before publishing or monetizing a video.
+The first export needs internet access to load the browser media engine and, on browsers without native AAC encoding, its AAC extension. Service-worker caching may make later use faster, but remote Quran audio and stock media still require their providers.
 
-Remote video export requires the media server to permit cross-origin canvas use. When a remote clip cannot be exported, use a generated motion background or import a local copy you are permitted to use.
+## Source setup and rights
+
+Pexels and Pixabay require a free personal API key. Keys remain in that browser and are excluded from project files.
+
+Wikimedia Commons and Internet Archive do not require keys, but each item can have different rights information. Review the original source before publishing or monetizing. See `SOURCES-AND-RIGHTS.md`.
+
+The tajweed layer is a visual aid and does not grade pronunciation. Audio presets improve clarity and ambience without cloning or impersonating a named reciter.
 
 ## Privacy
 
-- The application has no custom backend.
-- Uploaded audio and video stay in the browser.
-- Local videos saved to the media vault are stored in IndexedDB on that device.
-- Style settings, favorites, API keys, and saved remote links use browser storage.
-- Quran text, recitation audio, optional stock media, fonts, and MP4 conversion modules are fetched directly from their configured providers.
+- No custom backend is included.
+- Uploaded audio and video remain in the browser.
+- Local media-vault items are stored in IndexedDB on that device.
+- Settings, favorites, and optional API keys use browser storage.
+- Quran text, reciter audio, optional stock media, fonts, and export modules are fetched from their configured providers.
 
 ## Project structure
 
 ```text
-index.html             Quran browser, original controls, data catalogs, and canvas base
-pro-upgrade.js         Timeline, templates, audio mastering, projects, and export pipeline
-pro-upgrade.css        Studio 3/4 base editor styles
-studio-4.js            Media hub, reciter catalog sync, tajweed layer, motion backgrounds
-studio-4.css           Studio 4 media, tajweed, and reciter interface styles
+index.html             Quran browser, canvas base, catalogs, and legacy controls
+pro-upgrade.js         Timeline, mastering, deterministic renderer, validation, projects
+pro-upgrade.css        Main advanced-editor styles
+studio-5.js            Media hub, reciter sync, tajweed layer, deterministic motions
+studio-5.css           Media, tajweed, reciter, and performance controls
 manifest.webmanifest   Installable application metadata
-sw.js                  Offline application-shell cache
-icon.svg               Application icon
-SOURCES-AND-RIGHTS.md  Provider, licensing, and export notes
+sw.js                  Studio 5 application-shell cache
+EXPORT-ENGINE.md       Export diagnosis, architecture, and browser behavior
+SOURCES-AND-RIGHTS.md  Provider, licensing, and cross-origin notes
+tools/validate-project.py  Static project integrity checks
 start.sh / start.bat   Local static-server launchers
 ```
-
-## Browser recommendation
-
-A current Chrome or Edge release provides the strongest support for MediaRecorder, Web Audio, WebCodecs, canvas capture, IndexedDB, and MP4 conversion. Other browsers can use the WebM export path when H.264/AAC encoding is unavailable.

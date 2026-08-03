@@ -1,9 +1,10 @@
-/* Quran Reels Studio 4 — free media hub, cloud reciter catalog, tajweed visuals */
+/* Quran Reels Studio 5 — media hub, cloud reciters, tajweed, deterministic motion */
 (() => {
 'use strict';
 
-const VERSION='4.0.0';
-const SETTINGS_KEY='qrs-studio-4';
+const VERSION='5.0.0';
+const SETTINGS_KEY='qrs-studio-5';
+try{if(!localStorage.getItem(SETTINGS_KEY)&&localStorage.getItem('qrs-studio-4'))localStorage.setItem(SETTINGS_KEY,localStorage.getItem('qrs-studio-4'));}catch(_){}
 const RECITER_CACHE_KEY='qrs-aqc-reciter-cache-v1';
 const REMOTE_LIBRARY_KEY='qrs-remote-media-library-v1';
 const resultStore=new Map();
@@ -219,7 +220,7 @@ function particles(w,h,count,color,t,size=1){
   CT.save();for(let i=0;i<count;i++){const x=(i*191+Math.sin(i*3.1+t*.6)*w*.12+w)%w;const y=(i*97-t*(12+(i%7)*3)+h*5)%h;const r=(.5+(i%5)*.35)*size;CT.globalAlpha=.08+((i*37)%80)/100;CT.fillStyle=color;CT.beginPath();CT.arc(x,y,r,0,Math.PI*2);CT.fill();}CT.restore();
 }
 function drawMotion(w,h){
-  S._bo+=(.0025*(S.bgSpeed||1));const t=S._bo*30,id=S.motionBg||'nur-particles';
+  let t;if(Number.isFinite(S._renderTime)){t=S._renderTime*30*(S.bgSpeed||1);S._bo=t/30;}else{S._bo+=(.0025*(S.bgSpeed||1));t=S._bo*30;}const id=S.motionBg||'nur-particles';
   const palettes={
     'nur-particles':['#020617','#3b2a0b','#d6b45c'],'emerald-dust':['#00120c','#064e3b','#6ee7b7'],'midnight-stars':['#01020a','#172554','#bfdbfe'],
     'aurora-flow':['#020617','#0c4a6e','#0f766e'],'silk-waves':['#120622','#4c1d95','#c084fc'],'gold-bokeh':['#120a02','#713f12','#fde68a'],

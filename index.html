@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quran Reels Studio 4 — Quran Video Editor</title>
+<title>Quran Reels Studio 5 — Fixed-FPS Quran Video Editor</title>
 <meta name="theme-color" content="#0a0a0f">
 <meta name="description" content="Create TikTok and Reels-style Quran recitation videos directly in your browser.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="pro-upgrade.css">
-<link rel="stylesheet" href="studio-4.css">
+<link rel="stylesheet" href="studio-5.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cinzel:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Aref+Ruqaa:wght@400;700&family=Scheherazade+New:wght@400;500;600;700&family=Tajawal:wght@300;400;500;700;800;900&family=Cairo:wght@300;400;500;600;700;800&family=Almarai:wght@300;400;700;800&family=Reem+Kufi:wght@400;500;600;700&family=Katibeh&family=Lateef:wght@200;300;400;500;600;700;800&family=Ruwudu:wght@400;500;600;700&family=Alexandria:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -659,7 +659,20 @@ window.goStudio=()=>{
   $('ppBtn').innerHTML='&#9654; Preview';$('vcnt').textContent=`1 / ${idx.length}`;
   resizeCV();draw();renderCtrl();
 };
-function resizeCV(){const f=FMTS[S.fmt]||FMTS['9:16'];CV.width=f.w;CV.height=f.h;CV.style.aspectRatio=`${f.w}/${f.h}`;}
+function previewScale(){
+  if(S._fullResolution)return 1;
+  const mode=S.previewQuality||'balanced';
+  return mode==='quality'?.75:mode==='performance'?.35:.5;
+}
+function resizeCV(full=false){
+  const f=FMTS[S.fmt]||FMTS['9:16'];
+  S._fullResolution=!!full;
+  const scale=previewScale();
+  CV.width=Math.max(2,Math.round(f.w*scale/2)*2);
+  CV.height=Math.max(2,Math.round(f.h*scale/2)*2);
+  CV.dataset.logicalWidth=f.w;CV.dataset.logicalHeight=f.h;
+  CV.style.aspectRatio=`${f.w}/${f.h}`;
+}
 function getVerseIdx(){const i=[...S.sel].sort((a,b)=>a-b);if(!i.length)return -1;return i[Math.min(S.vIdx,i.length-1)];}
 function getVerseAt(idx){if(idx<0||idx>=S.va.length)return null;return{idx,ar:S.va[idx],en:S.ve[idx]};}
 function draw(){
@@ -775,7 +788,7 @@ function drawBg(w,h){
     return;
   }
   if(!S.bgP){CT.fillStyle='#0a0a0f';CT.fillRect(0,0,w,h);if(S.vignette>0){const g=CT.createRadialGradient(w/2,h/2,w*0.3,w/2,h/2,w*0.7);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${S.vignette})`);CT.fillStyle=g;CT.fillRect(0,0,w,h);}if(S.colorOv){CT.fillStyle=S.colorOv;CT.globalAlpha=S.colorOvOp;CT.fillRect(0,0,w,h);CT.globalAlpha=1;}return;}
-  S._bo+=0.002*S.bgSpeed;
+  if(Number.isFinite(S._renderTime))S._bo=S._renderTime*.06*(S.bgSpeed||1);else S._bo+=0.002*S.bgSpeed;
   const p=PRESETS.find(x=>x[0]===S.bgP)||PRESETS[0];
   const cs=p[1].split(','),cx=w/2,cy=h/2;
   const g=CT.createRadialGradient(cx+Math.sin(S._bo)*w*0.07,cy+Math.cos(S._bo*0.7)*h*0.05,0,cx,cy,Math.max(w,h)*.85);
@@ -800,9 +813,12 @@ function drawBg(w,h){
   if(S.vignette>0){const g=CT.createRadialGradient(w/2,h/2,w*0.3,w/2,h/2,w*0.7);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${S.vignette})`);CT.fillStyle=g;CT.fillRect(0,0,w,h);}
   if(S.colorOv){CT.fillStyle=S.colorOv;CT.globalAlpha=S.colorOvOp;CT.fillRect(0,0,w,h);CT.globalAlpha=1;}
 }
-function loop(){
+function loop(ts=performance.now()){
   const needsDraw=S.playing||S.exporting||(S._bgV&&S._bgV.readyState>=2&&!S._bgV.paused);
-  if(needsDraw){draw();S._raf=requestAnimationFrame(loop);}else S._raf=null;
+  if(!needsDraw){S._raf=null;return;}
+  const cap=S.exporting?60:(S.previewQuality==='performance'?20:30);
+  if(!S._lastPreviewFrame||ts-S._lastPreviewFrame>=1000/cap){S._lastPreviewFrame=ts;draw();}
+  S._raf=requestAnimationFrame(loop);
 }
 function startL(){if(!S._raf)S._raf=requestAnimationFrame(loop);}
 function stopL(){if(S._raf){cancelAnimationFrame(S._raf);S._raf=null;}}
@@ -828,113 +844,10 @@ function playV(idx){
 }
 
 // ═══ EXPORT ══════════════════════════════════════
+// Studio 5 installs the deterministic fixed-frame exporter from pro-upgrade.js.
+// The old captureStream/MediaRecorder exporter was removed because browser
+// throttling caused dropped frames and MP4 conversions could lose the audio track.
 window.cancelExport=()=>{S._cancel=true;};
-window.doExport=async()=>{
-  if(S.exporting||S.urls.length<1)return;
-  S.exporting=true;S._cancel=false;S.playing=false;S._audio.pause();
-  $('exo').classList.add('on');$('ppBtn').disabled=true;$('peBtn').disabled=true;$('cnlBtn').style.display='inline-block';
-  const pbar=$('expb'),pt=$('expP'),tt=$('expT');
-  const idx=[...S.sel].sort((a,b)=>a-b),total=idx.length;
-  try{
-    tt.textContent='Loading audio...';pt.textContent='0/'+total;pbar.style.width='3%';
-    const actx=new AudioContext();S._expActx=actx;
-    if(actx.state==='suspended')await actx.resume();
-    const bufs=[];
-    for(let i=0;i<total;i++){
-      if(S._cancel){tt.textContent='Cancelled';pt.textContent='Export cancelled';await new Promise(r=>setTimeout(r,1000));throw new Error('cancelled');}
-      try{
-        const r=await fetch(S.urls[i]);if(!r.ok)throw new Error('HTTP'+r.status);
-        const ab=await r.arrayBuffer();const buf=await actx.decodeAudioData(ab);bufs.push(buf);
-      }catch(e){console.warn('audio fail',i,e);bufs.push(null);}
-      pt.textContent=`Audio ${i+1}/${total}`;pbar.style.width=`${3+(i/total)*15}%`;
-    }
-    if(S._cancel)throw new Error('cancelled');
-    tt.textContent='Recording...';pt.textContent='Rendering frames...';
-    pbar.style.width='20%';
-    const fade=S.fadeDur;
-    const cum=[0];for(let i=0;i<total;i++)cum.push(cum[i]+(bufs[i]?.duration||2.5));
-    const totalTime=cum[total]+1.5;
-    const fps=S.fps;
-    const vidStream=CV.captureStream(fps);
-    const audDest=actx.createMediaStreamDestination();
-    const mix=new MediaStream([...vidStream.getVideoTracks(),...audDest.stream.getAudioTracks()]);
-    const mime='video/webm;codecs=vp9,opus';
-    const mime2='video/webm;codecs=vp8,opus';
-    const mime3='video/webm';
-    const mt=MediaRecorder.isTypeSupported(mime)?mime:MediaRecorder.isTypeSupported(mime2)?mime2:mime3;
-    const rec=new MediaRecorder(mix,{mimeType:mt});
-    const chunks=[];rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
-    pt.textContent=`Recording ~${Math.round(totalTime)}s (${mt.includes('vp9')?'VP9':'VP8'}) ...`;
-    rec.start();
-    const baseTime=actx.currentTime+0.3;
-    // Schedule all verses
-    for(let i=0;i<total;i++){
-      if(bufs[i]){
-        const src=actx.createBufferSource();src.buffer=bufs[i];src.connect(audDest);src.start(baseTime+cum[i]);
-      }
-      // Transition
-      if(i>0){
-        const fStart=(cum[i]-fade)*1000;
-        const vi=i;
-        setTimeout(()=>{
-          if(S._cancel)return;
-          const st=performance.now(),dur=fade*1000;
-          function fLoop(){
-            if(S._cancel)return;
-            const p=Math.min((performance.now()-st)/dur,1);
-            const w=CV.width,h=CV.height;if(!w||!h)return;
-            drawBg(w,h);
-            CT.fillStyle=`rgba(0,0,0,${S.veil})`;CT.fillRect(0,0,w,h);
-            // Zoom effect during transition
-            if(S.transStyle==='zoom'){
-              const s=1-p*0.03;CT.save();CT.translate(w/2,h/2);CT.scale(s,s);CT.translate(-w/2,-h/2);
-            }
-            // Crossfade
-            const va=getVerseAt(idx[vi-1]),vb=getVerseAt(idx[vi]);
-            if(va&&va.ar)drawVerseText(va.ar.text,va.en?.text||'',va.ar.numberInSurah,w,h,1-p,true);
-            if(vb&&vb.ar)drawVerseText(vb.ar.text,vb.en?.text||'',vb.ar.numberInSurah,w,h,p,true);
-            if(S.transStyle==='zoom')CT.restore();
-            if(S.wm)drawWm(w,h);
-            p<1?requestAnimationFrame(fLoop):draw();
-          }
-          fLoop();
-        },Math.max(0,fStart));
-      }
-      // Status update at verse boundary
-      setTimeout(()=>{S.vIdx=i;if(!S._cancel)draw();pt.textContent=`Verse ${i+1}/${total} @ ${Math.round(cum[i])}s`;pbar.style.width=`${20+((i+1)/total)*65}%`;},cum[i]*1000);
-    }
-    // Wait for completion
-    await Promise.race([
-      new Promise(r=>setTimeout(r,totalTime*1000+500)),
-      new Promise(r=>{const iv=setInterval(()=>{if(S._cancel){clearInterval(iv);r();}},100);})
-    ]);
-    if(S._cancel)throw new Error('cancelled');
-    rec.stop();actx.close();S._expActx=null;
-    await new Promise(r=>setTimeout(r,500));
-    pbar.style.width='92%';pt.textContent='Finalizing...';
-    const blob=new Blob(chunks,{type:'video/webm'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=`quran-${S.surah?.[2]?.replace(/[^a-z]/gi,'-')||'recitation'}-${S.fmt}-${S.rec}.webm`;
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url),5000);
-    pbar.style.width='100%';pt.textContent='Done! Downloading...';
-    tt.textContent='Export Complete';
-    await new Promise(r=>setTimeout(r,1500));
-  }catch(e){
-    if(e.message==='cancelled'){
-      pt.textContent='Cancelled';tt.textContent='Export Cancelled';
-      if(S._expActx)try{S._expActx.close();S._expActx=null;}catch(_){}
-      await new Promise(r=>setTimeout(r,1000));
-    }else{
-      console.error('Export error:',e);
-      pt.textContent='Error: '+e.message;tt.textContent='Export failed';
-      await new Promise(r=>setTimeout(r,3000));
-    }
-  }
-  S.exporting=false;S._cancel=false;$('exo').classList.remove('on');$('ppBtn').disabled=false;$('peBtn').disabled=false;$('cnlBtn').style.display='none';
-  if(!S._bgV)stopL();draw();
-};
 
 // ═══ CONTROLS ══════════════════════════════════
 function renderCtrl(){
@@ -1062,7 +975,7 @@ window.pickVid=(idx,el)=>{
 };
 
 // ═══ PEXELS LIVE SEARCH ══════════════════════════
-const PEX_KEY=''; // Security: users provide their own key in Studio 3
+const PEX_KEY=''; // Security: users provide their own key locally
 window.quickPex=(q)=>{const i=document.getElementById('pexQ');if(i){i.value=q;searchPexels();}};
 window.searchPexels=async()=>{
   const q=document.getElementById('pexQ')?.value?.trim()||'nature';const g=document.getElementById('pexG');if(!g)return;
@@ -1151,6 +1064,6 @@ renderHome();
 setInterval(()=>{if(S.view==='vs'&&S._bgV&&S._bgV.readyState>=2&&!S._raf&&!S._bgV.paused)startL();},300);
 </script>
 <script src="pro-upgrade.js"></script>
-<script src="studio-4.js"></script>
+<script src="studio-5.js"></script>
 </body>
 </html>

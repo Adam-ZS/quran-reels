@@ -1,4 +1,4 @@
-/* Quran Reels Studio 4 — media hub, reciter cloud, and tajweed layer */
+/* Quran Reels Studio 5 — media hub, reciter cloud, tajweed, and performance UI */
 .v4-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border:1px solid var(--bd);border-radius:999px;font-size:8px;color:var(--td);background:rgba(255,255,255,.025)}
 .v4-pill.good{border-color:rgba(74,222,128,.35);color:#86efac}.v4-pill.gold{border-color:rgba(201,169,110,.38);color:var(--gd)}
 .v4-rec-tools{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}.v4-rec-tools .pro-btn{width:100%}
