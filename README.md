@@ -1,8 +1,16 @@
 # Quran Reels Studio Pro 🎬
 
+[![GitHub stars](https://img.shields.io/github/stars/Adam-ZS/quran-reels?style=flat-square&color=green)](https://github.com/Adam-ZS/quran-reels/stargazers)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Single file](https://img.shields.io/badge/single-file-ff6b6b?style=flat-square)]()
+[![No server](https://img.shields.io/badge/no-server-2f80ed?style=flat-square)]()
+[![Live demo](https://img.shields.io/badge/demo-vercel-000000?style=flat-square&logo=vercel)](https://quran-reels-lyart.vercel.app)
+
 Generate TikTok/Reels-style Quran recitation videos in your browser. Pick a surah, select verses, choose from 65+ reciters, customize visuals, and export as `.webm` — fully client-side, no server.
 
 **Live:** https://quran-reels-lyart.vercel.app
+
+![Quran Reels Studio preview](assets/preview.png)
 
 ## What's New (v2)
 
