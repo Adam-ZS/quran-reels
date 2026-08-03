@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Quran Reels Studio — live demo
+    url: https://quran-reels-lyart.vercel.app
+    about: Test the current build before reporting issues.
