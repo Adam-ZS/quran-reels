@@ -1,7 +1,7 @@
 {
   "name": "quran-reels",
-  "version": "1.1.0",
-  "description": "Quran Reels Studio — TikTok-style Quran recitation video generator",
+  "version": "4.0.0",
+  "description": "Browser-first Quran recitation video editor with free media sources, reciter catalog sync, tajweed visuals, and local media vault",
   "scripts": {
     "dev": "vercel dev",
     "deploy": "vercel --prod"

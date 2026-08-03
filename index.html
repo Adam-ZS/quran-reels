@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quran Reels Studio Pro</title>
+<title>Quran Reels Studio 4 — Quran Video Editor</title>
+<meta name="theme-color" content="#0a0a0f">
+<meta name="description" content="Create TikTok and Reels-style Quran recitation videos directly in your browser.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="pro-upgrade.css">
+<link rel="stylesheet" href="studio-4.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cinzel:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Aref+Ruqaa:wght@400;700&family=Scheherazade+New:wght@400;500;600;700&family=Tajawal:wght@300;400;500;700;800;900&family=Cairo:wght@300;400;500;600;700;800&family=Almarai:wght@300;400;700;800&family=Reem+Kufi:wght@400;500;600;700&family=Katibeh&family=Lateef:wght@200;300;400;500;600;700;800&family=Ruwudu:wght@400;500;600;700&family=Alexandria:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -177,13 +182,10 @@ body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;overflo
     <div class="vi">
       <div class="ar" id="vsar"></div>
       <div class="en" id="vsen"></div>
-      <div class="mt" id="vmeta" style="font-size:9px;color:var(--td);margin-top:2px;letter-spacing:.3px"></div>
     </div>
     <div class="va">
       <button onclick="toggleAll()" id="selAllBtn">Select All</button>
-      <button onclick="checkAudio()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--bd);background:var(--s2);color:var(--td);font-size:10px;cursor:pointer;font-family:inherit">Check Audio</button>
       <button class="st" id="stBtn" onclick="goStudio()">Studio &rarr;</button>
-      <span id="chkSt" style="font-size:9px;color:var(--td);align-self:center;max-width:140px;line-height:1.3"></span>
     </div>
   </div>
   <div class="vl" id="vl"></div>
@@ -619,8 +621,7 @@ const S={
   transStyle:'crossfade', // crossfade, zoom, slide
   fadeDur:0.4,
   fps:30,
-  vol:1,rev:0.25,bass:0,treble:0,comp:true,bismillah:true,
-  _fx:null,_audio:new Audio(),_raf:null,_bo:0,_bgV:null,_bgImg:null,_expActx:null
+  _audio:new Audio(),_raf:null,_bo:0,_bgV:null,_bgImg:null,_expActx:null
 };
 const $=id=>document.getElementById(id);
 const CV=document.getElementById('cv'),CT=CV.getContext('2d');
@@ -628,7 +629,7 @@ const CV=document.getElementById('cv'),CT=CV.getContext('2d');
 // ═══ HOME ═══════════════════════════════════════
 window.renderHome=()=>{
   const q=$('srch').value.toLowerCase();
-  const f=SURAH.filter(s=>s[2].toLowerCase().includes(q)||s[1].includes(q)||s[3].toLowerCase().includes(q));
+  const f=SURAH.filter(s=>String(s[2]).toLowerCase().includes(q)||String(s[1]).includes(q)||String(s[3]).toLowerCase().includes(q));
   $('pop').innerHTML=POP.map(p=>{const s=SURAH[p[0]-1];return`<div class="pc" onclick="pickSurah(${s[0]})"><div class="ar">${s[1]}</div><div class="en">${s[2]} (${p[1]})</div></div>`;}).join('');
   $('sg').innerHTML=f.map(s=>`<div class="sc" onclick="pickSurah(${s[0]})"><div><div class="ar">${s[1]}</div><div class="en">${s[2]} — ${s[3]}</div></div><div class="ct">${s[4]} verses</div></div>`).join('');
 };
@@ -638,26 +639,13 @@ window.pickSurah=async n=>{
   const s=SURAH.find(x=>x[0]===n);if(!s)return;
   S.surah=s;S.sel=new Set();S.vIdx=0;showView('vv');
   $('vsar').textContent=s[1];$('vsen').textContent=`${s[2]} — ${s[3]}`;
-  const vm=$('vmeta');if(vm)vm.textContent='';
   if(VC[n]){S.va=VC[n].ar;S.ve=VC[n].en;renderVerses();return;}
   $('vl').innerHTML='<div style="text-align:center;padding:40px;color:var(--td);font-size:13px"><div class="spin" style="margin:0 auto 12px"></div>Loading verses...</div>';
-  try{const j=await(await fetch(`https://api.alquran.cloud/v1/surah/${n}/editions/quran-uthmani,en.sahih`)).json();S.va=j.data[0].ayahs;S.ve=j.data[1].ayahs;VC[n]={ar:S.va,en:S.ve};const _m=j.data[0];const vm=$('vmeta');if(vm&&_m){const _p=[(_m.revelationType==='Meccan'?'مكية':'مدنية'),_m.numberOfAyahs+' آيات'];if(_m.englishNameMeaning)_p.push(_m.englishNameMeaning);vm.textContent=_p.join(' · ');}renderVerses();}catch(e){$('vl').innerHTML='<div style="text-align:center;padding:40px;color:var(--td)">Failed to load. Check connection.</div>';}
+  try{const j=await(await fetch(`https://api.alquran.cloud/v1/surah/${n}/editions/quran-uthmani,en.sahih`)).json();S.va=j.data[0].ayahs;S.ve=j.data[1].ayahs;VC[n]={ar:S.va,en:S.ve};renderVerses();}catch(e){$('vl').innerHTML='<div style="text-align:center;padding:40px;color:var(--td)">Failed to load. Check connection.</div>';}
 };
 function renderVerses(){$('vl').innerHTML=S.va.map((v,i)=>`<div class="vi2${S.sel.has(i)?' sel':''}" onclick="tog(${i})"><div class="ck${S.sel.has(i)?' c':''}">${S.sel.has(i)?'✓':''}</div><div class="vn">${v.numberInSurah}</div><div class="vt"><div class="ar">${v.text}</div><div class="en">${S.ve[i]?.text||''}</div></div></div>`).join('');$('stBtn').classList.toggle('a',S.sel.size>0);$('selAllBtn').textContent=S.sel.size===S.va.length?'Deselect All':'Select All';}
 window.tog=i=>{S.sel.has(i)?S.sel.delete(i):S.sel.add(i);renderVerses();};
 window.toggleAll=()=>{if(S.sel.size===S.va.length)S.sel=new Set();else{S.sel=new Set();S.va.forEach((_,i)=>S.sel.add(i));}renderVerses();};
-window.checkAudio=async()=>{
-  const st=$('chkSt');if(!st)return;
-  if(!S.surah||S.sel.size===0){st.textContent='Select verses first.';return;}
-  const idx=[...S.sel].sort((a,b)=>a-b),f=FOLDERS[S.rec];if(!f){st.textContent='No reciter folder.';return;}
-  st.textContent='Checking '+idx.length+' verses...';
-  const bad=[];
-  await Promise.all(idx.map(async i=>{
-    const u=`https://everyayah.com/data/${f}/${String(S.surah[0]).padStart(3,'0')}${String(S.va[i].numberInSurah).padStart(3,'0')}.mp3`;
-    try{const r=await fetch(u,{method:'HEAD'});if(!r.ok)bad.push(S.va[i].numberInSurah);}catch(e){bad.push(S.va[i].numberInSurah);}
-  }));
-  st.textContent=bad.length?('⚠ Missing audio: v'+bad.join(', v')):(idx.length+'/'+idx.length+' audio OK');
-};
 
 // ═══ STUDIO ═════════════════════════════════════
 window.goStudio=()=>{
@@ -725,20 +713,17 @@ function drawVerseText(txt,tr,vn,w,h,alpha,fadeDir){
     CT.font=`${S.trWt} ${S.trSz}px "${S.trFn}","Inter",sans-serif`;
     let l='';for(const w of tr.split(' ')){const t=l?l+' '+w:w;if(CT.measureText(t).width>mw&&l){tl.push(l);l=w;}else l=t;}if(l)tl.push(l);
   }
-  const hasB=S.bismillah&&vn===1&&S.surah&&S.surah[0]!==9;
-  const bismLh=hasB?lh*0.95:0;
   const gap=S.trans&&tl.length?S.arSz*0.3+tlh:0;
-  const th2=al.length*lh+bismLh+gap+tl.length*tlh;
+  const th2=al.length*lh+gap+tl.length*tlh;
   // Vertical position
   const vp=S.vPos/100;
-  const minAy=(hasB?lh*1.4:lh/2)+10,maxAy=h-th2+lh/2-10;
+  const minAy=lh/2+10,maxAy=h-th2+lh/2-10;
   let ay=Math.max(minAy,Math.min(maxAy,h*vp-th2/2+lh/2));
   // Draw Arabic
   CT.textAlign='center';CT.textBaseline='middle';CT.direction='rtl';
   CT.font=`${S.arWt} ${S.arSz}px "${S.arFn}","Amiri","Scheherazade New",serif`;
   if(S.shad){CT.shadowColor=S.shadC;CT.shadowBlur=S.shadB;CT.shadowOffsetY=S.shadY;}
   CT.fillStyle=S.tc;
-  if(hasB){CT.save();CT.globalAlpha=alpha*0.95;CT.font=`500 ${S.arSz*0.8}px "${S.arFn}",serif`;CT.fillStyle='#c9a96e';CT.fillText('\uFDFD',w/2,ay-bismLh);CT.restore();}
   al.forEach((l,i)=>{CT.fillText(l,w/2,ay+i*lh);});
   CT.shadowBlur=0;CT.shadowOffsetY=0;
   if(S.stroke){CT.strokeStyle=S.strokeC;CT.lineWidth=S.strokeW;al.forEach((l,i)=>{CT.strokeText(l,w/2,ay+i*lh);});}
@@ -826,7 +811,7 @@ function stopL(){if(S._raf){cancelAnimationFrame(S._raf);S._raf=null;}}
 window.tp=()=>{
   if(S.playing){S.playing=false;S._audio.pause();$('ppBtn').innerHTML='&#9654; Preview';if(!S._bgV)stopL();draw();return;}
   if(!S.urls.length)return;S.playing=true;S.vIdx=0;$('ppBtn').innerHTML='&#9646;&#9646;';$('vcnt').textContent='1 / '+S.urls.length;
-  ensureFX();startL();playV(0);
+  startL();playV(0);
 };
 window.prv=()=>{if(S.playing)return;const i=[...S.sel].sort((a,b)=>a-b);if(!i.length)return;S.vIdx=Math.max(0,S.vIdx-1);$('vcnt').textContent=(S.vIdx+1)+' / '+i.length;draw();};
 window.nxt=()=>{if(S.playing)return;const i=[...S.sel].sort((a,b)=>a-b);if(!i.length)return;S.vIdx=Math.min(i.length-1,S.vIdx+1);$('vcnt').textContent=(S.vIdx+1)+' / '+i.length;draw();};
@@ -835,49 +820,11 @@ function playV(idx){
   if(idx>=S.urls.length){S.playing=false;$('ppBtn').innerHTML='&#9654; Preview';if(!S._bgV)stopL();draw();return;}
   S.vIdx=idx;draw();$('vcnt').textContent=(idx+1)+' / '+S.urls.length;
   S._audio.src=S.urls[idx];S._audio.load();
-  if(S._fx&&S._fx.actx.state!=='running')S._fx.actx.resume().catch(()=>{});
   const go=()=>{S._audio.currentTime=0;S._audio.play().catch(()=>setTimeout(()=>playV(idx+1),100));};
   S._audio.onerror=()=>setTimeout(()=>playV(idx+1),100);
   S._audio.oncanplaythrough=()=>{go();S._audio.oncanplaythrough=null;};
   S._audio.onended=()=>{if(S.playing)setTimeout(()=>playV(idx+1),50);};
   setTimeout(()=>{if(S.playing&&S.vIdx===idx){go();S._audio.oncanplaythrough=null;}},2500);
-}
-
-// ═══ AUDIO FX (WebAudio recitation enhancer) ══════
-function makeIR(actx,sec,decay){
-  const rl=actx.sampleRate*sec,imp=actx.createBuffer(2,rl,actx.sampleRate);
-  for(let c=0;c<2;c++){const d=imp.getChannelData(c);
-    for(let i=0;i<rl;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/rl,decay);}
-  return imp;
-}
-function ensureFX(){
-  if(S._fx){if(S._fx.actx.state!=='running')S._fx.actx.resume().catch(()=>{});return S._fx;}
-  const actx=new AudioContext();if(actx.state==='suspended')actx.resume().catch(()=>{});
-  const inG=actx.createGain(),bass=actx.createBiquadFilter(),tre=actx.createBiquadFilter(),
-        dry=actx.createGain(),wet=actx.createGain(),sum=actx.createGain(),
-        rev=actx.createConvolver(),comp=actx.createDynamicsCompressor(),out=actx.createGain();
-  bass.type='lowshelf';bass.frequency.value=220;
-  tre.type='highshelf';tre.frequency.value=3200;
-  rev.buffer=makeIR(actx,1.8,2.2);
-  comp.threshold.value=-18;comp.knee.value=20;comp.ratio.value=4;comp.attack.value=0.01;comp.release.value=0.25;
-  inG.connect(bass);bass.connect(tre);tre.connect(dry);dry.connect(sum);
-  tre.connect(rev);rev.connect(wet);wet.connect(sum);sum.connect(comp);comp.connect(out);
-  S._fx={actx,in:inG,bass,tre,dry,wet,sum,rev,comp,out};
-  applyFX();
-  const src=actx.createMediaElementSource(S._audio);
-  src.connect(inG);out.connect(actx.destination);
-  return S._fx;
-}
-function applyFX(){
-  if(!S._fx)return;
-  const f=S._fx;
-  f.in.gain.value=0.9;
-  f.out.gain.value=Math.max(0.1,Math.min(2,S.vol));
-  f.bass.gain.value=S.bass;
-  f.tre.gain.value=S.treble;
-  f.dry.gain.value=1-S.rev*0.75;
-  f.wet.gain.value=S.rev*1.6;
-  f.comp.disconnect();if(S.comp)f.comp.connect(f.out);
 }
 
 // ═══ EXPORT ══════════════════════════════════════
@@ -887,10 +834,10 @@ window.doExport=async()=>{
   S.exporting=true;S._cancel=false;S.playing=false;S._audio.pause();
   $('exo').classList.add('on');$('ppBtn').disabled=true;$('peBtn').disabled=true;$('cnlBtn').style.display='inline-block';
   const pbar=$('expb'),pt=$('expP'),tt=$('expT');
-  const idx=[...S.sel].sort((a,b)=>a-b),total=idx.length,fails=[];
+  const idx=[...S.sel].sort((a,b)=>a-b),total=idx.length;
   try{
     tt.textContent='Loading audio...';pt.textContent='0/'+total;pbar.style.width='3%';
-    const fx=ensureFX();const actx=fx.actx;S._expActx=actx;
+    const actx=new AudioContext();S._expActx=actx;
     if(actx.state==='suspended')await actx.resume();
     const bufs=[];
     for(let i=0;i<total;i++){
@@ -898,7 +845,7 @@ window.doExport=async()=>{
       try{
         const r=await fetch(S.urls[i]);if(!r.ok)throw new Error('HTTP'+r.status);
         const ab=await r.arrayBuffer();const buf=await actx.decodeAudioData(ab);bufs.push(buf);
-      }catch(e){console.warn('audio fail',i,e);bufs.push(null);fails.push(i);}
+      }catch(e){console.warn('audio fail',i,e);bufs.push(null);}
       pt.textContent=`Audio ${i+1}/${total}`;pbar.style.width=`${3+(i/total)*15}%`;
     }
     if(S._cancel)throw new Error('cancelled');
@@ -910,7 +857,6 @@ window.doExport=async()=>{
     const fps=S.fps;
     const vidStream=CV.captureStream(fps);
     const audDest=actx.createMediaStreamDestination();
-    fx.out.disconnect();fx.out.connect(audDest);
     const mix=new MediaStream([...vidStream.getVideoTracks(),...audDest.stream.getAudioTracks()]);
     const mime='video/webm;codecs=vp9,opus';
     const mime2='video/webm;codecs=vp8,opus';
@@ -924,7 +870,7 @@ window.doExport=async()=>{
     // Schedule all verses
     for(let i=0;i<total;i++){
       if(bufs[i]){
-        const src=actx.createBufferSource();src.buffer=bufs[i];src.connect(fx.in);src.start(baseTime+cum[i]);
+        const src=actx.createBufferSource();src.buffer=bufs[i];src.connect(audDest);src.start(baseTime+cum[i]);
       }
       // Transition
       if(i>0){
@@ -963,23 +909,22 @@ window.doExport=async()=>{
       new Promise(r=>{const iv=setInterval(()=>{if(S._cancel){clearInterval(iv);r();}},100);})
     ]);
     if(S._cancel)throw new Error('cancelled');
-    rec.stop();fx.out.disconnect(audDest);fx.out.connect(actx.destination);S._expActx=null;
+    rec.stop();actx.close();S._expActx=null;
     await new Promise(r=>setTimeout(r,500));
     pbar.style.width='92%';pt.textContent='Finalizing...';
     const blob=new Blob(chunks,{type:'video/webm'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    const rl=RECS.find(r=>r[0]===S.rec);const rn=rl?rl[1].replace(/\s*\(.*\)$/,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,''):S.rec;
-    a.href=url;a.download=`quran-${S.surah?.[2]?.replace(/[^a-z]/gi,'-')||'recitation'}-${rn}-${S.fmt}.webm`;
+    a.href=url;a.download=`quran-${S.surah?.[2]?.replace(/[^a-z]/gi,'-')||'recitation'}-${S.fmt}-${S.rec}.webm`;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url),5000);
-    pbar.style.width='100%';pt.textContent=fails.length?('Done! Missing audio: '+fails.map(i=>'v'+(idx[i]+1)).join(', ')):'Done! Downloading...';
-    tt.textContent=fails.length?('Export Complete ('+fails.length+' silent verse'+(fails.length>1?'s':'')+')'):'Export Complete';
+    pbar.style.width='100%';pt.textContent='Done! Downloading...';
+    tt.textContent='Export Complete';
     await new Promise(r=>setTimeout(r,1500));
   }catch(e){
     if(e.message==='cancelled'){
       pt.textContent='Cancelled';tt.textContent='Export Cancelled';
-      if(S._expActx){try{const ff=ensureFX();ff.out.disconnect();ff.out.connect(ff.actx.destination);S._expActx=null;}catch(_){}}
+      if(S._expActx)try{S._expActx.close();S._expActx=null;}catch(_){}
       await new Promise(r=>setTimeout(r,1000));
     }else{
       console.error('Export error:',e);
@@ -1021,12 +966,6 @@ function renderCtrl(){
 <div class="cg"><label>Background Blur</label><div class="rg"><input type="range" id="bgBlurR" min="0" max="10" step="0.5" value="${S.bgBlur}" oninput="onCh()"><span class="rv" id="bgBlurV">${S.bgBlur}px</span></div></div>
 <div class="cg"><label>Transition Style</label><div class="fp">${['crossfade','zoom','slide'].map(t=>`<button class="fb${t===S.transStyle?' on':''}" onclick="setTrans('${t}',this)">${t}</button>`).join('')}</div></div>
 <div class="cg"><label>Transition Duration (s)</label><div class="rg"><input type="range" id="fadeDur" min="0.1" max="1.5" step="0.05" value="${S.fadeDur}" oninput="onCh()"><span class="rv" id="fadeDurV">${S.fadeDur.toFixed(2)}</span></div></div>
-<div class="cg"><div class="tr2"><label>Sound Enhancer</label><label class="tg"><input type="checkbox" id="compTg" ${S.comp?'checked':''} onchange="onCh()"><span class="sl"></span></label></div></div>
-<div class="cg"><label>Volume</label><div class="rg"><input type="range" id="volR" min="0" max="2" step="0.05" value="${S.vol}" oninput="onCh()"><span class="rv" id="volV">${Math.round(S.vol*100)}%</span></div></div>
-<div class="cg"><label>Reverb (room echo)</label><div class="rg"><input type="range" id="revR" min="0" max="1" step="0.05" value="${S.rev}" oninput="onCh()"><span class="rv" id="revV">${Math.round(S.rev*100)}%</span></div></div>
-<div class="cg"><label>Bass (dB)</label><div class="rg"><input type="range" id="bassR" min="-12" max="12" step="1" value="${S.bass}" oninput="onCh()"><span class="rv" id="bassV">${S.bass>0?'+':''}${S.bass}</span></div></div>
-<div class="cg"><label>Treble (dB)</label><div class="rg"><input type="range" id="treR" min="-12" max="12" step="1" value="${S.treble}" oninput="onCh()"><span class="rv" id="treV">${S.treble>0?'+':''}${S.treble}</span></div></div>
-<div class="cg"><div class="tr2"><label>Bismillah on first verse</label><label class="tg"><input type="checkbox" id="bisTg" ${S.bismillah?'checked':''} onchange="onCh()"><span class="sl"></span></label></div></div>
 <div class="cg"><label>Export FPS</label><div class="fp">${[24,30,60].map(f=>`<button class="fb${f===S.fps?' on':''}" onclick="setFps(${f},this)">${f}fps</button>`).join('')}</div></div>
 `;
   const sel=$('rc');RECS.forEach(r=>{const o=document.createElement('option');o.value=r[0];o.textContent=r[1];sel.appendChild(o);});sel.value=S.rec;
@@ -1123,7 +1062,7 @@ window.pickVid=(idx,el)=>{
 };
 
 // ═══ PEXELS LIVE SEARCH ══════════════════════════
-const PEX_KEY='563492ad6f91700001000001f58512b27ee04f898e24172698be375f';
+const PEX_KEY=''; // Security: users provide their own key in Studio 3
 window.quickPex=(q)=>{const i=document.getElementById('pexQ');if(i){i.value=q;searchPexels();}};
 window.searchPexels=async()=>{
   const q=document.getElementById('pexQ')?.value?.trim()||'nature';const g=document.getElementById('pexG');if(!g)return;
@@ -1189,13 +1128,6 @@ window.onCh=()=>{
   if(g('colorOvOpV'))g('colorOvOpV').textContent=S.colorOvOp.toFixed(2);
   S.bgBlur=parseFloat(g('bgBlurR')?.value)||0;if(g('bgBlurV'))g('bgBlurV').textContent=S.bgBlur+'px';
   S.fadeDur=parseFloat(g('fadeDur')?.value)||0.4;if(g('fadeDurV'))g('fadeDurV').textContent=S.fadeDur.toFixed(2);
-  const _vol=g('volR');if(_vol)S.vol=parseFloat(_vol.value);if(g('volV'))g('volV').textContent=Math.round(S.vol*100)+'%';
-  const _rev=g('revR');if(_rev)S.rev=parseFloat(_rev.value);if(g('revV'))g('revV').textContent=Math.round(S.rev*100)+'%';
-  const _bass=g('bassR');if(_bass)S.bass=parseFloat(_bass.value);if(g('bassV'))g('bassV').textContent=(S.bass>0?'+':'')+S.bass;
-  const _tre=g('treR');if(_tre)S.treble=parseFloat(_tre.value);if(g('treV'))g('treV').textContent=(S.treble>0?'+':'')+S.treble;
-  S.comp=g('compTg')?.checked??true;
-  S.bismillah=g('bisTg')?.checked??true;
-  applyFX();
   // Shadow UI
   if(g('shU'))g('shU').style.display=S.shad?'block':'none';
   const rec=g('rc')?.value;
@@ -1218,5 +1150,7 @@ renderHome();
 // Keep canvas animation alive when video bg active
 setInterval(()=>{if(S.view==='vs'&&S._bgV&&S._bgV.readyState>=2&&!S._raf&&!S._bgV.paused)startL();},300);
 </script>
+<script src="pro-upgrade.js"></script>
+<script src="studio-4.js"></script>
 </body>
 </html>

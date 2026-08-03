@@ -1,0 +1,17 @@
+{
+  "name": "Quran Reels Studio 4",
+  "short_name": "Quran Reels",
+  "description": "Create Quran recitation videos with free media sources, reciter audio, tajweed colors, and browser export.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

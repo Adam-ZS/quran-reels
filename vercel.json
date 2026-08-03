@@ -1,5 +1,17 @@
 {
-  "name": "quran-reels",
   "version": 2,
-  "builds": [{"src": "*.html", "use": "@vercel/static"}]
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {"key": "X-Content-Type-Options", "value": "nosniff"},
+        {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"},
+        {"key": "Permissions-Policy", "value": "camera=(), geolocation=(), microphone=(self)"}
+      ]
+    }
+  ]
 }
